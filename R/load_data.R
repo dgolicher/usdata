@@ -169,3 +169,22 @@ yearly_totals<-function(){
 
 }
 
+
+all_causes<-function () {
+  fpath <- system.file("extdata", "Weekly_counts_of_deaths_by_jurisdiction_and_age_group.csv", package="usdata")
+  d<- read_csv(fpath)[,-c(9:11)]
+
+  names(d)<- gsub(" ","_",names(d))
+  d$date<-mdy(d$Week_Ending_Date)
+  d$Year<-as.factor(year(d$date))
+  d$Week<-week(d$date)
+
+  d %>% filter(date<(max(date)-20)) %>% filter(Age_Group !="Under 25 years") -> all_causes
+
+  save(all_causes,file="~/webpages/epidemiology/cdc/usdata/data/all_causes.rda")
+}
+
+
+
+
+

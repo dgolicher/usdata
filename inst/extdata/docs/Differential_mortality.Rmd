@@ -1,0 +1,45 @@
+---
+title: "DIfferential mortality between US States"
+author: "Duncan Golicher"
+date: "1/16/2021"
+output:
+  html_document:
+    
+    code_folding: hide
+    toc: true
+    toc_float: true
+    collapsed: true
+fig_caption: true
+link-citations: yes
+bibliography: [refs.bib]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Data sources [@CDC; @CDC2020; @CDC2020a; @Force]
+
+
+```{r,message=FALSE,warning=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+library(mapview)
+library(sf)
+library(COVID19)
+library(spdep)
+library(tmap)
+library(usdata)
+
+```
+
+
+
+
+```{r}
+
+data("total_by _year")
+
+```
+
+# References and data sources

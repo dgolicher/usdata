@@ -3,6 +3,7 @@ title: "Demo"
 author: "Duncan Golicher"
 date: "1/16/2021"
 output: html_document
+bibliography: [refs.bib]
 ---
 
 ```{r setup, include=FALSE}
@@ -11,6 +12,7 @@ library(tidyverse)
 ```
 
 
+[@CDC; @CDC2020; @CDC2020a; @Force]
 
 ```{r}
 library(usdata)
@@ -59,4 +61,4 @@ str(census)
 data(us)
 str(us)
 ```
-
+# References
