@@ -57,5 +57,80 @@ make_census <- function(){
 }
 
 
+#' Pulls data from acs using tidycensus package
+#'
+#' @return
+#' @export
+#'
+#' @examples
+get_acs<-function() {
+  ## Not run:
+  library(tidycensus)
+  library(tidyverse)
+  library(viridis)
+  library(sf)
+  #census_api_key("00ac321d5b7acade2459e3c416a89a9e36d6b4c7",install=TRUE)
+
+  # B19013_001 = household_income
+  # B01001_001 = total population
+  # B01001_025 = male over 85
+  # B01001_024  = male 80 to 84
+  # B01001_023  = male 75 to 79
+  # B01001_022  = male 70 to 74
+  # B01001_049  = female over 85
+  # B01001_048  = female over 85
+
+  over_70 <- get_acs(geography = "state", year= 2019,
+                     variables = c("B01001_049", "B01001_048", "B01001_047","B01001_046","B01001_025","B01001_024","B01001_023", "B01001_022"))
 
 
+  over_70 %>% group_by(NAME) %>% summarise(over_70= sum(estimate)) -> over_70
+
+  household <- get_acs(geography = "state", year= 2019,
+                       variables = c("B19013_001"))
+
+  household %>% group_by(NAME) %>% summarise(household_income= sum(estimate)) -> household
+
+  population <- get_acs(geography = "state", year= 2019,
+                        variables = c("B01001_001"))
+
+  population %>% group_by(NAME) %>% summarise(epopulation= sum(estimate)) -> population
+
+  d<-merge(over_70,household)
+  d<-merge(d,population)
+
+  d$percent_over_70<-100*(d$over_70/d$epopulation)
+
+  names(d)[1]<-"State"
+  acs<-d
+  save(acs, file="acs.rda")
+}
+
+
+#' Get deaths by age clss from cdcd
+#'
+#' @return
+#' @export
+#'
+#' @examples
+get_age_data<-function() {
+  library(tidyverse)
+  d<- read_csv("https://data.cdc.gov/api/views/vsak-wrfu/rows.csv?accessType=DOWNLOAD")
+  library(lubridate)
+  d$date<-mdy(d$`End Week`)
+  separate(d, `Age Group`, into =c("Start", "End")) -> d
+  gsub("years", "100", d$End) -> d$End
+  gsub("Under", "0", d$Start) -> d$Start
+
+  d$End<-as.numeric(as.character(d$End))
+  d$Start<-as.numeric(as.character(d$Start))
+  gsub(" ", "_", names(d)) -> names(d)
+  gsub("-", "_", names(d)) -> names(d)
+  tolower(names(d))->names(d)
+  d %>% filter(date < max(date)-20) -> d ## Take out data at the end due to long reporting delay
+  d$non_covid<-d$total_deaths-d$covid_19_deaths
+  d %>% filter(d$sex == "All Sex") -> d
+  totals_by_age<-d
+  save(totals_by_age,file="~/webpages/epidemiology/cdc/usdata/data/totals_by_age.rda")
+  totals_by_age
+}
