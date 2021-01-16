@@ -1,0 +1,62 @@
+---
+title: "Demo"
+author: "Duncan Golicher"
+date: "1/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+
+```{r}
+library(usdata)
+```
+
+
+```{r}
+data(pop)
+str(pop)
+```
+
+```{r}
+data(measures)
+str(measures)
+```
+
+```{r}
+data(States_COVID19)
+str(States_COVID19)
+```
+
+
+```{r}
+
+data(totals_by_age)
+str(totals_by_age)
+
+```
+
+
+
+```{r}
+data(acs)
+str(acs)
+```
+
+
+```{r}
+data(census)
+str(census)
+```
+
+
+
+```{r}
+data(us)
+str(us)
+```
+
