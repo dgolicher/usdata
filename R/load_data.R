@@ -152,6 +152,7 @@ yearly_totals<-function(){
   d$Non_Natural <-d$All_Cause-d$Natural_Cause
   names(d)
   d %>% pivot_longer(cols=5:20) ->d
+
   d$State<-d$Jurisdiction_of_Occurrence
   d<-merge(d,pop)
   d$value_per_100k<-d$value/(d$pop/100000)
@@ -160,6 +161,10 @@ yearly_totals<-function(){
   Cause<-unique(d$name)
 
   d$Year<-d$MMWR_Year
+
+  weekly_counts<-d
+
+  save(weekly_counts,file="~/webpages/epidemiology/cdc/usdata/data/weekly_counts.rda")
 
   d  %>%
     group_by(Jurisdiction_of_Occurrence,name,Year) %>%
@@ -183,6 +188,9 @@ all_causes<-function () {
 
   save(all_causes,file="~/webpages/epidemiology/cdc/usdata/data/all_causes.rda")
 }
+
+
+
 
 
 
