@@ -134,3 +134,38 @@ get_age_data<-function() {
   save(totals_by_age,file="~/webpages/epidemiology/cdc/usdata/data/totals_by_age.rda")
   totals_by_age
 }
+
+
+#' Title
+#'
+#' @return
+#' @export
+#'
+#' @examples
+yearly_totals<-function(){
+
+  fpath <- system.file("extdata", "Weekly_Counts_of_Deaths_by_State_and_Select_Causes__2019-2020.csv", package="usdata")
+  d <- read_csv(fpath)[,1:19]
+  data(pop)
+  d %>% filter(`Week Ending Date` < max(d$`Week Ending Date`)-15) -> d
+  names(d)<- gsub(" ","_",names(d))
+  d$Non_Natural <-d$All_Cause-d$Natural_Cause
+  names(d)
+  d %>% pivot_longer(cols=5:20) ->d
+  d$State<-d$Jurisdiction_of_Occurrence
+  d<-merge(d,pop)
+  d$value_per_100k<-d$value/(d$pop/100000)
+
+  Jurisdiction<-unique(d$Jurisdiction_of_Occurrence)
+  Cause<-unique(d$name)
+
+  d$Year<-d$MMWR_Year
+
+  d  %>%
+    group_by(Jurisdiction_of_Occurrence,name,Year) %>%
+    summarise(value=sum(value, na.rm = TRUE)) -> tot
+
+  save(tot,file="~/webpages/epidemiology/cdc/usdata/data/total_by_year.rda")
+
+}
+
