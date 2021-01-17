@@ -4,7 +4,6 @@ author: "Duncan Golicher"
 date: "1/16/2021"
 output:
   html_document:
-    runtime: shiny
     code_folding: hide
     toc: true
     toc_float: true
@@ -30,8 +29,8 @@ library(COVID19)
 library(spdep)
 library(tmap)
 library(usdata)
-library(aqm)
-aqm::multiplot
+library(lubridate)
+
 ```
 
 
@@ -39,22 +38,63 @@ aqm::multiplot
 
 ```{r}
 
-data("all_causes")
-d<-all_causes
-unique(d$Age_Group)
-
-d %>% group_by(Jurisdiction,date) %>% summarise(deaths=sum(Number_of_Deaths)) -> deaths
-deaths$State<-deaths$Jurisdiction
-pop %>% filter(State !="New York City")-> pop
-deaths<-merge(pop,deaths)
-deaths$deaths_per10k<-deaths$deaths/(deaths$pop/10000)
-
+data(census)
+d<-census
+d$rate<-d$Deaths/(d$Population/10000)
+d %>% ggplot(aes(x=as.factor(Year), y=rate)) + geom_boxplot() + geom_smooth()
 ```
 
 
 
 ```{r}
-deaths %>% ggplot(aes(x=date,y=deaths_per10k,group=State)) +geom_line()
+d %>% group_by(State) %>% summarise(crude_death_rate=round(mean(rate),1)) -> cdr
+dt(cdr)
 ```
+
+
+
+```{r}
+colors <- brewer.pal(6, "RdYlGn")[6:1]
+cdr_geo<-merge(us,cdr)
+mapview(cdr_geo, zcol="crude_death_rate", col.regions = colors, layer.name = "Deaths per 10K",
+             at = round(quantile(cdr$crude_death_rate,c(0,0.2,0.4,0.6,0.8,1)),1)) 
+```
+
+
+```{r}
+cdr<-merge(cdr,acs)
+cdr %>% ggplot(aes(x=percent_over_70, y=crude_death_rate, label=State)) + geom_point() + geom_smooth(method="lm") + geom_text(size=2)
+```
+
+
+```{r}
+mod<-lm(data=cdr,crude_death_rate~percent_over_70)
+cdr$adjusted_cdr<-residuals(mod)
+```
+
+```{r}
+cdr_geo<-merge(us,cdr)
+mapview(cdr_geo, zcol="adjusted_cdr", col.regions = colors, layer.name = "adjusted_cdr per 10K",
+             at = round(quantile(cdr$adjusted_cdr,c(0,0.2,0.4,0.6,0.8,1)),1)) 
+```
+
+```{r}
+cdr %>% filter(State !="Puerto Rico")%>% ggplot(aes(x=household_income, y=adjusted_cdr, label=State)) + geom_point(size=0) + geom_smooth(method="lm") + geom_text(size=2)
+```
+
+
+```{r}
+mod<-lm(data=cdr,adjusted_cdr~household_income)
+cdr$re_adjusted_cdr<-residuals(mod)
+```
+
+
+```{r}
+cdr_geo<-merge(us,cdr)
+mapview(cdr_geo, zcol="re_adjusted_cdr", col.regions = colors, layer.name = "re_adjusted_cdr",
+             at = round(quantile(cdr$re_adjusted_cdr,c(0,0.2,0.4,0.6,0.8,1)),1)) 
+```
+
+
 
 # References and data sources
