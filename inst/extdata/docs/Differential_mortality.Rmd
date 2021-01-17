@@ -17,14 +17,6 @@ bibliography: [refs.bib]
 knitr::opts_chunk$set(echo = TRUE,message=FALSE,warning=FALSE)
 ```
 
-# Introduction
-
-One of the commonest criticisms of media reporting on the pandemic has been the use of a cumulative death count as a measure of progress of the disease.  This has led to the public perception of ever increasing mortality. The number has been used without a reference denominator. At the very least the number of deaths that would be expected to occur naturally over any given period should have been included. 
-
-In the highly charged political atmosphere of the United States the raw death toll has been particularly unhelpful as a metric. There has been a tendency to use the raw number as a yardstick to measure the performance of state governors.  One difficulty with this that has been widely overlooked is that the baseline mortality differs greatly between individual states. 
-
-
-
 
 ```{r,message=FALSE,warning=FALSE}
 library(tidyverse)
@@ -40,6 +32,15 @@ theme_set(theme_bw())
 ```
 
 
+# Introduction
+
+One of the commonest criticisms of media reporting on the pandemic has been the use of a cumulative death count as a measure of progress of the disease.  This has led to the public perception of ever increasing mortality. The number has been used without a reference denominator. At the very least the number of deaths that would be expected to occur naturally over any given period should have been included. 
+
+In the highly charged political atmosphere of the United States the raw death toll has been particularly unhelpful as a metric. There has been a tendency to use the raw number as a yardstick to measure the performance of state governors.  One difficulty with this that has been widely overlooked is that the baseline mortality differs greatly between individual states. 
+
+
+
+
 ## Establishing a baseline
 
 ```{r, fig.cap='Fig 1: Crude death rates per 10 thousand for the  population of the USA States and Puerto Rico. The outlier above the whiskers is West Virginia'}
@@ -47,7 +48,9 @@ theme_set(theme_bw())
 data(census)
 d<-census
 d$rate<-d$Deaths/(d$Population/10000)
-d %>% ggplot(aes(x=as.factor(Year), y=rate)) + geom_boxplot() + geom_smooth() -> g1
+d %>% mutate(lb=ifelse(State %in% c("West Virginia","Utah", "California", "Florida", "New York", "North Dakota","Texas", "Oklahoma") ,State,"")) %>%
+  
+  ggplot(aes(x=as.factor(Year), y=rate, label=lb)) + geom_boxplot(alpha=0.2,fill="lightgrey",col="lightgrey") + geom_text(size=2) -> g1
 
 g1 + labs(title = "", 
                      caption = "Source: USA census population estimate \n see https://www.census.gov/programs-surveys/popest.html for details",
@@ -60,14 +63,15 @@ g1
 
 ```{r}
 d %>% group_by(State) %>% summarise(crude_death_rate=round(mean(rate),1)) -> cdr
-dt(cdr)
+cdr_totals<-cdr
+
 ```
 
 
 
 ```{r}
 library(RColorBrewer)
-colors <- brewer.pal(6, "RdYlGn")[6:1]
+colors <- brewer.pal(7, "RdYlGn")[7:1]
 cdr_geo<-merge(us,cdr)
 # mapview(cdr_geo, zcol="crude_death_rate", col.regions = colors, layer.name = "Deaths per 10K",
 #              at = round(quantile(cdr$crude_death_rate,c(0,0.2,0.4,0.6,0.8,1)),1)) 
@@ -79,7 +83,7 @@ cdr_geo<-merge(us,cdr)
 ```{r}
 map1 <- tm_shape(cdr_geo)+ tm_style_white() +
   tm_fill("crude_death_rate", 
-          breaks = round(quantile(cdr$crude_death_rate,c(0,0.2,0.4,0.6,0.8,1)),1),
+          breaks = round(quantile(cdr$crude_death_rate,c(0,0.1,0.2,0.4,0.6,0.8,0.9,1)),1),
           style = "fixed",
           textNA = "No data",
           colorNA = "white", 
@@ -92,7 +96,7 @@ map1 <- tm_shape(cdr_geo)+ tm_style_white() +
 
 ```{r}
 cdr<-merge(cdr,acs)
-cdr %>% ggplot(aes(x=percent_over_70, y=crude_death_rate, label=State)) + geom_point() + geom_smooth(method="lm") + geom_text(size=2)
+cdr %>% ggplot(aes(x=percent_over_70, y=crude_death_rate, label=State)) + geom_point() + geom_smooth(method="lm",alpha=0.1,col="lightgrey") + geom_text(size=2)
 ```
 
 
@@ -111,9 +115,10 @@ cdr_geo<-merge(us,cdr)
 
 
 ```{r}
+
 map2 <- tm_shape(cdr_geo)+ tm_style_white() +
   tm_fill("adjusted_cdr", 
-          breaks = round(quantile(cdr$adjusted_cdr,c(0,0.2,0.4,0.6,0.8,1)),1),
+          breaks = round(quantile(cdr$adjusted_cdr,c(0,0.1,0.2,0.4,0.6,0.8,0.9,1)),1),
           style = "fixed",
           textNA = "No data",
           colorNA = "white", 
@@ -128,16 +133,17 @@ map2 <- tm_shape(cdr_geo)+ tm_style_white() +
 
 
 ```{r}
-
+colors2 <- brewer.pal(7, "Reds")
 map2a <- tm_shape(cdr_geo)+ tm_style_white() +
   tm_fill("percent_over_70", 
-          breaks = round(quantile(cdr$percent_over_70,c(0,0.2,0.4,0.6,0.8,1)),1),
+          breaks = round(quantile(cdr$percent_over_70,c(0,0.1,0.2,0.4,0.6,0.8,0.9,1)),1),
           style = "fixed",
           textNA = "No data",
           colorNA = "white", 
-          palette = colors )+
+          palette = colors2 )+
   tm_borders() + tm_legend(outside=TRUE) 
-##map2a
+#map2a
+
 
 ```
 
@@ -145,7 +151,9 @@ map2a <- tm_shape(cdr_geo)+ tm_style_white() +
 
 
 ```{r}
-cdr %>% filter(State !="Puerto Rico")%>% ggplot(aes(x=household_income, y=adjusted_cdr, label=State)) + geom_point(size=0) + geom_smooth(method="lm") + geom_text(size=2)
+cdr %>% filter(State !="Puerto Rico")-> cdr
+
+cdr%>% ggplot(aes(x=household_income, y=adjusted_cdr, label=State)) + geom_point(size=0) + geom_smooth(method="lm",alpha=0.1,col="lightgrey") + geom_text(size=2)
 ```
 
 
@@ -155,6 +163,9 @@ cdr$Re_adjusted_cdr<-residuals(mod)
 ```
 
 
+
+
+
 ```{r}
 cdr_geo<-merge(us,cdr)
 # mapview(cdr_geo, zcol="re_adjusted_cdr", col.regions = colors, layer.name = "re_adjusted_cdr",
@@ -162,7 +173,7 @@ cdr_geo<-merge(us,cdr)
 
 map3 <- tm_shape(cdr_geo)+ tm_style_white() +
   tm_fill("Re_adjusted_cdr", 
-          breaks = round(quantile(cdr$Re_adjusted_cdr,c(0,0.2,0.4,0.6,0.8,1)),1),
+          breaks = round(quantile(cdr$Re_adjusted_cdr,c(0,0.1,0.2,0.4,0.6,0.8,0.9,1)),1),
           style = "fixed",
           textNA = "No data",
           colorNA = "white", 
@@ -173,16 +184,106 @@ map3 <- tm_shape(cdr_geo)+ tm_style_white() +
 
 
 ```{r}
+colors2 <- brewer.pal(7, "PRGn")
+map3a <- tm_shape(cdr_geo)+ tm_style_white() +
+  tm_fill("household_income", 
+          breaks = round(quantile(cdr$household_income,c(0,0.1,0.2,0.4,0.6,0.8,0.9,1)),1),
+          style = "fixed",
+          textNA = "No data",
+          colorNA = "white", 
+          palette = colors2 )+
+  tm_borders() + tm_legend(outside=TRUE) 
+#map3a
+```
+
+
+
+
+
+```{r}
 library(grid)
 grid.newpage()
-page.layout <- grid.layout(nrow = 2, ncol = 2, widths=c(.6,.6), heights=c(.8,.8))
+page.layout <- grid.layout(nrow = 3, ncol = 1)
 pushViewport(viewport(layout = page.layout))
-
 print(map1, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
-print(map2a, vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
 print(map2, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
-print(map3, vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
+print(map3, vp=viewport(layout.pos.row = 3, layout.pos.col = 1))
 ```
+
+```{r}
+library(grid)
+grid.newpage()
+page.layout <- grid.layout(nrow = 2, ncol = 1, widths=c(.6,.6), heights=c(.8,.8))
+pushViewport(viewport(layout = page.layout))
+print(map2a, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(map3a, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+```
+
+
+
+
+
+## Covid-19 mortality
+
+
+```{r}
+data("States_COVID19")
+d<-States_COVID19
+d$population<-aqm::clean(d$population)
+
+d %>% group_by(State, population) %>% summarise(covid_deaths=max(deaths,na.rm=TRUE)) %>% mutate(covid_cdr=covid_deaths/(population/10000))-> cvd
+
+
+
+```
+
+
+```{r}
+cvd_geo<-merge(us,cvd)
+covid_map1 <- tm_shape(cvd_geo)+ tm_style_white() +
+  tm_fill("covid_cdr", 
+          breaks = round(quantile(cvd$covid_cdr,c(0,0.2,0.4,0.6,0.8,1)),1),
+          style = "fixed",
+          textNA = "No data",
+          colorNA = "white", 
+          palette = colors )+
+  tm_borders() + tm_legend(outside=TRUE) 
+covid_map1
+```
+
+
+```{r}
+cdr<-merge(cdr,cvd)
+cdr$covid_percent_of_baseline<-100*(cdr$covid_cdr/cdr$crude_death_rate)
+ggplot(cdr,aes(x=household_income,y=covid_percent_of_baseline,label=State))  + geom_smooth(method="lm",alpha=0.1,col="lightgrey") +geom_text(size=2)
+```
+
+
+```{r}
+cdr_geo<-merge(us,cdr)
+s<-as(cdr_geo,"Spatial")
+nb <- poly2nb(s, queen=TRUE)
+lw <- nb2listw(nb, style="W", zero.policy=TRUE)
+moran.test(s$covid_percent_of_baseline,lw, alternative="greater")
+```
+
+
+```{r}
+s$inc.lag <- lag.listw(lw, s$covid_percent_of_baseline)
+
+s@data %>% ggplot(aes(x=inc.lag, y=covid_percent_of_baseline, label=State)) +geom_smooth(method="lm", alpha=0.1,col="lightgrey") + geom_text(size=2, check_overlap = TRUE, nudge_y=0.5) +xlab("Mean percent baseline mortality in neighbouring states")  + ylab("Percent baseline mortality")
+```
+
+
+## Searchable data tables {.tabset}
+
+### Crude death rates per state
+
+```{r}
+dt(cdr_totals)
+```
+
+
 
  [@CDC; @CDC2020; @CDC2020a; @Force, @phe]
 
