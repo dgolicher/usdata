@@ -4,7 +4,7 @@ author: "Duncan Golicher"
 date: "1/16/2021"
 output:
   html_document:
-    
+    runtime: shiny
     code_folding: hide
     toc: true
     toc_float: true
@@ -30,16 +30,31 @@ library(COVID19)
 library(spdep)
 library(tmap)
 library(usdata)
+library(aqm)
+aqm::multiplot
+```
+
+
+## Establishing a baseline
+
+```{r}
+
+data("all_causes")
+d<-all_causes
+unique(d$Age_Group)
+
+d %>% group_by(Jurisdiction,date) %>% summarise(deaths=sum(Number_of_Deaths)) -> deaths
+deaths$State<-deaths$Jurisdiction
+pop %>% filter(State !="New York City")-> pop
+deaths<-merge(pop,deaths)
+deaths$deaths_per10k<-deaths$deaths/(deaths$pop/10000)
 
 ```
 
 
 
-
 ```{r}
-
-data("total_by _year")
-
+deaths %>% ggplot(aes(x=date,y=deaths_per10k,group=State)) +geom_line()
 ```
 
 # References and data sources
