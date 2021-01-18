@@ -1,12 +1,11 @@
 ---
-title: "DIfferential mortality between US States"
+title: "Differential mortality between US States"
 author: "Duncan Golicher"
 date: "1/16/2021"
 output:
   html_document:
     code_folding: hide
     toc: true
-    toc_float: true
     collapsed: true
 fig_caption: true
 link-citations: yes
@@ -39,9 +38,15 @@ One of the commonest criticisms of media reporting on the pandemic has been the 
 In the highly charged political atmosphere of the United States the raw death toll has been particularly unhelpful as a metric. There has been a tendency to use the raw number as a yardstick to measure the performance of state governors.  One difficulty with this that has been widely overlooked is that the baseline mortality differs greatly between individual states. 
 
 
+# Baseline mortality
 
+## Crude statewide death ratios: Years 2011 to 2019
 
-## Establishing a baseline
+In order to establish a suitable baseline for comparison with the Covid-19 associated mortality recorded for 2020 I used data taken from the US census. The complete census only takes place once every decade, but a comprehensive series of household surveys are combined with official records and modelling to fill in the gaps [@phe]. 
+Figure 1 shows the results of aggregating the death count by state and year and dividing the total by the state population for the relevant year. This produces the crude death ratio (CDR) which can be expressed as deaths per 10 thousand. 
+
+The variation between states is much more notable than the trend. Although the crude death rates lie within a range of 75 to 90 deaths per 10 thousand for 50% of the states, there are some notable outliers which leads to an overall range which varies by around a factor of two. West Virginia shows consistent exceptional high mortality while Utah has notably very low intrinsic mortality. 
+
 
 ```{r, fig.cap='Fig 1: Crude death rates per 10 thousand for the  population of the USA States and Puerto Rico. The outlier above the whiskers is West Virginia'}
 
@@ -87,16 +92,39 @@ map1 <- tm_shape(cdr_geo)+ tm_style_white() +
           style = "fixed",
           textNA = "No data",
           colorNA = "white", 
-          palette = colors )+
+          palette = colors )+ tm_text("State", size=0.3) +
   tm_borders() + tm_legend(outside=TRUE) 
 #map1
 ```
 
+The spatial pattern of crude death rate shown in figure 2 shows a notable pattern. States on both the North East coast and the West tend to have low CDRs, while the Appalachian and Southern States have high values.  
 
 
-```{r}
+```{r, fig.cap='Fig 2: Crude death rate calculate as the numbers of deaths per year divided by the population of the state in the year in question. The mean is taken for the years between 2011 to to 2019. During this period the overall CDR has only shown minor change, although with some fluctuations in a few  states'}
+
+map1
+```
+
+
+## Adjustment for age
+
+A fully comprehensive adjustment of the CDR would require the calculation of age specific death rates for all demographic bands for each state combined with data on the number of deaths for each of the age bands. 
+A simpler approach that results in an adjustment that should follow the same overall pattern can be achieved by regressing the crude death rate on the proportion of the population over 70 and then extracting the residual variability. 
+The approach is illustrated in figure 3. States with CDRs that fall above the fitted regression line have more deaths than would be predicted based on the proportion of elderly residents. States that fall below the line have fewer deaths than expected. 
+
+The regression itself is a good predictor of overall crude death rates with an $R^2$ value of 0.43. The position of Florida, falling well below the trend line, suggests that the overall health of the Florida population may be better than would be expected given the age profile for the state as a whole.     
+
+```{r, fig.cap='Fig 3: Regression of crude death rate on percent of the state population over 70. The regression is significant (p<0.0001 with an adjusted R squared of 0.432. West Virgina is clear outlier with a much higher than predicted crude mortality rate'}
 cdr<-merge(cdr,acs)
-cdr %>% ggplot(aes(x=percent_over_70, y=crude_death_rate, label=State)) + geom_point() + geom_smooth(method="lm",alpha=0.1,col="lightgrey") + geom_text(size=2)
+cdr %>% ggplot(aes(x=percent_over_70, y=crude_death_rate, label=State)) + geom_smooth(method="lm",alpha=0.1,col="lightgrey") + geom_text(size=2) -> g2
+
+g2<- g2 + labs(title = "", 
+                     caption = "Source: USA census population estimate \n see https://www.census.gov/programs-surveys/popest.html for details",
+                     x = "Percent of state population over 70",
+                     y="Crude death rate (deaths per 10K)") 
+g2
+
+
 ```
 
 
@@ -140,7 +168,7 @@ map2a <- tm_shape(cdr_geo)+ tm_style_white() +
           style = "fixed",
           textNA = "No data",
           colorNA = "white", 
-          palette = colors2 )+
+          palette = colors2 ) + 
   tm_borders() + tm_legend(outside=TRUE) 
 #map2a
 
@@ -148,12 +176,21 @@ map2a <- tm_shape(cdr_geo)+ tm_style_white() +
 ```
 
 
+## Adjustment for household income
 
+States with the highest crude death rates, such as West Virginia and Oklahoma, also have the lowest household incomes. Poverty is generally assumed to be linked to poor health outcomes. The median household income is a good proxy indicator for a wide range of socio-economic factors. Figure 4 shows the results of regressing the age adjusted crude death rate against median household income. The regression is highly significant (p<0.0001) with an $R^2$ of 0.46. 
 
-```{r}
+```{r, fig.cap='Fig 4: Regression of adjusted crude death rate on median household income. The regression is significant (p<0.0001 with an adjusted R squared of 0.46.'}
 cdr %>% filter(State !="Puerto Rico")-> cdr
 
-cdr%>% ggplot(aes(x=household_income, y=adjusted_cdr, label=State)) + geom_point(size=0) + geom_smooth(method="lm",alpha=0.1,col="lightgrey") + geom_text(size=2)
+cdr%>% ggplot(aes(x=household_income, y=adjusted_cdr, label=State)) + geom_point(size=0) + geom_smooth(method="lm",alpha=0.1,col="lightgrey") + geom_text(size=2) -> g3
+
+
+g3<- g3 + labs(title = "", 
+                     caption = "Source: USA census population estimate \n see https://www.census.gov/programs-surveys/popest.html for details",
+                     x = "Median household income",
+                     y="CDR adjusted for population over 70") 
+g3
 ```
 
 
@@ -162,8 +199,15 @@ mod<-lm(data=cdr,adjusted_cdr~household_income)
 cdr$Re_adjusted_cdr<-residuals(mod)
 ```
 
+## Explanatory power of demographics and income combined.
 
+The analysis demonstrates that both demographic and socio-economic factors are strongly associated with crude death rates. 
+An additive regression model can be fitted in order to provide a measure of the explanatory power of the two factors combined. The model explained 70% of the variability. After holding for differences in the state-wide demography a difference of ten thousand dollars in the mean state-wide household income is associated with a change of around 5.8 in the state-wide CDR.  
 
+```{r}
+mod<-lm(data=cdr,crude_death_rate~household_income+percent_over_70)
+summary(mod)
+```
 
 
 ```{r}
@@ -177,7 +221,7 @@ map3 <- tm_shape(cdr_geo)+ tm_style_white() +
           style = "fixed",
           textNA = "No data",
           colorNA = "white", 
-          palette = colors )+
+          palette = colors ) + 
   tm_borders() + tm_legend(outside=TRUE) 
 #map3
 ```
@@ -191,29 +235,17 @@ map3a <- tm_shape(cdr_geo)+ tm_style_white() +
           style = "fixed",
           textNA = "No data",
           colorNA = "white", 
-          palette = colors2 )+
+          palette = colors2 ) + 
   tm_borders() + tm_legend(outside=TRUE) 
 #map3a
 ```
 
+## Mapping the results
 
-
-
-
-```{r}
+```{r, fig.cap='Fig 5: Input variables used in analysis of crude death rates. The percent of the population over 70 and median hosehold incomes. Household incomes are highly correlated with a wide range of additional socio-economic indicators'}
 library(grid)
 grid.newpage()
-page.layout <- grid.layout(nrow = 3, ncol = 1)
-pushViewport(viewport(layout = page.layout))
-print(map1, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
-print(map2, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
-print(map3, vp=viewport(layout.pos.row = 3, layout.pos.col = 1))
-```
-
-```{r}
-library(grid)
-grid.newpage()
-page.layout <- grid.layout(nrow = 2, ncol = 1, widths=c(.6,.6), heights=c(.8,.8))
+page.layout <- grid.layout(nrow = 2, ncol = 1)
 pushViewport(viewport(layout = page.layout))
 print(map2a, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(map3a, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
@@ -221,24 +253,69 @@ print(map3a, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
 
 
 
+```{r, fig.cap='Fig 6: Crude death rate adjusted for proportion of the state population over 70 and the relationship between CDR and median household income. The most apparent result of the correction for age is found in the case of Florida. Adjustment through holding for the effect of income has relatively little impact on the pattern, as income is a consistent driver of outcome'}
+library(grid)
+grid.newpage()
+page.layout <- grid.layout(nrow = 2, ncol = 1)
+pushViewport(viewport(layout = page.layout))
+print(map2, vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(map3, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+```
+
+## Summary
+
+- Baseline crude mortality rates vary by a factor of two between US states. 
+- An important fraction of this variability can be attributed directly to variability in the fraction of the population over 70 years of age.
+- Independently of the effect of demography, socio-economic differences between states as captured by media household incomes statistically explains a large proportion of the residual variability
 
 
-## Covid-19 mortality
+
+# Covid-19 mortality
+
+## Covid deaths
+
+At the time of writing (`r Sys.Date()`) there is no clearly defined variable that measures the impact of Covid-19 on deaths within any US State. The pandemic dynamic has led to many time series being plotted in order to understand elements such as the timing of non pharmaceutical interventions on the progression of the epidemic.
+
+Nine months have now passed since the initial phase of the pandemic. The numbers of deaths attributed to Sars-Cov-2 infections in the USA continues to rise. So any analysis will only be provisional.
+
+The baseline CDR analysis was based on the sum total of deaths over a twelve month period. Therefore a comparable analysis of Covid-19 attributed deaths can use the current cumulative deaths total as input. 
 
 
 ```{r}
 data("States_COVID19")
 d<-States_COVID19
 d$population<-aqm::clean(d$population)
+d$month<-month(d$date)
+d$year<-year(d$date) 
+d$covid_month<-d$month+(d$year-2020)
 
 d %>% group_by(State, population) %>% summarise(covid_deaths=max(deaths,na.rm=TRUE)) %>% mutate(covid_cdr=covid_deaths/(population/10000))-> cvd
+
+d %>% group_by(State, population, covid_month) %>% summarise(covid_deaths=max(deaths,na.rm=TRUE)) %>% mutate(covid_cdr=covid_deaths/(population/10000))-> cvd2
+
+
 
 
 
 ```
 
 
-```{r}
+```{r, Fig 7: Crude cummulative covid death rates per 10k of state population for later monthhs in the epidemic. Notice that states that registered high early mortality are ouliers. Some states such as the Dokotas have risen in rank in recent months.}
+cvd2 %>% filter(covid_month> 6) %>% mutate(lb=ifelse(State %in% c("Arizona","Utah", "California", "Florida", "New York", "North Dakota","Texas", "South Dakota", "New Jersey") ,State,"")) %>% 
+ggplot(aes(as.factor(covid_month),y=covid_cdr, label=lb)) + geom_boxplot(alpha=0.2,fill="lightgrey",col="lightgrey") + geom_text(size=2) ->cg1
+cg1<- cg1 + labs(title = "", 
+                     caption = "Source: COVID-19 Case Surveillance Public Use Data",
+                     x = "Month",
+                     y="Covid-19 deaths per 10k population") 
+cg1
+```
+
+## Mapping Covid deaths
+
+The cumulative numbers of Covid-19 deaths reported for each state divided by the state population (in 2019) is shown in figure 
+
+
+```{r, fig.cap='Fig 9: Crude cummulative covid death rates per 10k of state population January 2021.'}
 cvd_geo<-merge(us,cvd)
 covid_map1 <- tm_shape(cvd_geo)+ tm_style_white() +
   tm_fill("covid_cdr", 
@@ -246,17 +323,48 @@ covid_map1 <- tm_shape(cvd_geo)+ tm_style_white() +
           style = "fixed",
           textNA = "No data",
           colorNA = "white", 
-          palette = colors )+
+          palette = colors )+ tm_text("State", size=0.3) +
   tm_borders() + tm_legend(outside=TRUE) 
 covid_map1
 ```
 
+## Correlates of Covid-19 mortality
+
+In contrast to the baseline all cause population adjusted mortality the cumulative deaths attributed to Covid-19 per state show no statistically significant relationship with any of the covariates associated with baseline mortality.
+
+In addition the cumulative lockdown stringency index was calculated for the states 
 
 ```{r}
 cdr<-merge(cdr,cvd)
 cdr$covid_percent_of_baseline<-100*(cdr$covid_cdr/cdr$crude_death_rate)
-ggplot(cdr,aes(x=household_income,y=covid_percent_of_baseline,label=State))  + geom_smooth(method="lm",alpha=0.1,col="lightgrey") +geom_text(size=2)
+
 ```
+
+```{r, fig.cap='Fig 10: Realtionships between crude cummulative covid death rates per 10k of state population January 2021 and covariates. All regression lines are not significant at p<0.05'}
+cdr<-merge(cdr,measures)
+ggplot(cdr,aes(x=crude_death_rate,y=covid_cdr,label=State))  + geom_smooth(method="lm",alpha=0.5,col="black") +geom_point(size=1) ->gg1
+
+ggplot(cdr,aes(x=percent_over_70,y=covid_cdr,label=State))  + geom_smooth(method="lm",alpha=0.5,col="black") +geom_point(size=1) ->gg2
+
+ggplot(cdr,aes(x=percent_over_70,y=covid_cdr,label=State))  + geom_smooth(method="lm",alpha=0.5,col="black") +geom_point(size=1) ->gg3
+
+ggplot(cdr,aes(x=Re_adjusted_cdr,y=covid_cdr,label=State))  + geom_smooth(method="lm",alpha=0.5,col="black") +geom_point(size=1) ->gg4
+
+ggplot(cdr,aes(stringency,y=covid_cdr,label=State))  + geom_smooth(method="lm",alpha=0.5,col="black") +geom_point(size=1) ->gg5
+
+ggplot(cdr,aes(schools,y=covid_cdr,label=State))  + geom_smooth(method="lm",alpha=0.5,col="black") +geom_point(size=1) ->gg6
+
+multiplot(gg1,gg2,gg3,gg4,gg5,gg6, cols=2)
+
+```
+
+A multiple additive regression model which included all potential explanatory variables did not show any variable to be siginficantly 
+
+```{r}
+model<- lm(data=cdr, covid_cdr~crude_death_rate+percent_over_70+percent_over_70+Re_adjusted_cdr+stringency+schools)
+summary(model)
+```
+
 
 
 ```{r}
@@ -275,12 +383,12 @@ s@data %>% ggplot(aes(x=inc.lag, y=covid_percent_of_baseline, label=State)) +geo
 ```
 
 
-## Searchable data tables {.tabset}
+## Searchable data table {.tabset}
 
-### Crude death rates per state
+
 
 ```{r}
-dt(cdr_totals)
+dt(cdr)
 ```
 
 
