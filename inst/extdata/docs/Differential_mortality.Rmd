@@ -1,5 +1,5 @@
 ---
-title: "Differential mortality between US States"
+title: "Correlates of baseline and Covid related mortality in the American States"
 author: "Duncan Golicher"
 date: "1/16/2021"
 output:
@@ -30,6 +30,7 @@ library(lubridate)
 theme_set(theme_bw())
 ```
 
+**This is an unfinished draft analysis of a very sensitive subject. Do not cite or use any results until they have been reviewed and refined.**
 
 # Introduction
 
@@ -40,12 +41,13 @@ In the highly charged political atmosphere of the United States the raw death to
 
 # Baseline mortality
 
-## Crude statewide death ratios: Years 2011 to 2019
+## Crude state wide mortality rates: Years 2011 to 2019
 
 In order to establish a suitable baseline for comparison with the Covid-19 associated mortality recorded for 2020 I used data taken from the US census. The complete census only takes place once every decade, but a comprehensive series of household surveys are combined with official records and modelling to fill in the gaps [@phe]. 
-Figure 1 shows the results of aggregating the death count by state and year and dividing the total by the state population for the relevant year. This produces the crude death ratio (CDR) which can be expressed as deaths per 10 thousand. 
+Figure 1 shows the results of aggregating the death count by state and year and dividing the total by the state population for the relevant year. This produces the crude death rate (CDR)  expressed as deaths per 10 thousand of the population. 
 
-The variation between states is much more notable than the trend. Although the crude death rates lie within a range of 75 to 90 deaths per 10 thousand for 50% of the states, there are some notable outliers which leads to an overall range which varies by around a factor of two. West Virginia shows consistent exceptional high mortality while Utah has notably very low intrinsic mortality. 
+The variation between states is much more notable than the weak trend. 
+Crude death rates lie within a range of 75 to 90 deaths per 10 thousand for 50% of the states. There are some notable outliers which leads to an overall range which varies by around a factor of two. West Virginia shows consistent exceptional high mortality while Utah has notably very low intrinsic mortality. 
 
 
 ```{r, fig.cap='Fig 1: Crude death rates per 10 thousand for the  population of the USA States and Puerto Rico. The outlier above the whiskers is West Virginia'}
@@ -64,6 +66,25 @@ g1 + labs(title = "",
 g1
 ```
 
+
+
+```{r}
+data("weeekly_counts")
+cdc<-weekly_counts
+cdc %>% filter(name=="All_Cause") %>% group_by(Jurisdiction_of_Occurrence,pop,MMWR_Year) %>% summarise(deaths=sum(value)) %>% mutate(rate=deaths/(pop/10000)) -> cdc
+cdc$Year<-cdc$MMWR_Year
+cdc$State<-cdc$Jurisdiction_of_Occurrence
+
+cdc %>% mutate(lb=ifelse(State %in% c("West Virginia","Utah", "California", "Florida", "New York", "North Dakota","Texas", "Oklahoma") ,State,"")) %>%
+  
+  ggplot(aes(x=as.factor(Year), y=rate, label=lb)) + geom_boxplot(alpha=0.2,fill="lightgrey",col="lightgrey") + geom_text(size=2) -> g1
+
+g1 + labs(title = "", 
+                     caption = "Source: USA census population estimate \n see https://www.census.gov/programs-surveys/popest.html for details",
+                     x = "Year",
+                     y="Crude death rate (deaths per 10K)") 
+
+```
 
 
 ```{r}
@@ -97,7 +118,7 @@ map1 <- tm_shape(cdr_geo)+ tm_style_white() +
 #map1
 ```
 
-The spatial pattern of crude death rate shown in figure 2 shows a notable pattern. States on both the North East coast and the West tend to have low CDRs, while the Appalachian and Southern States have high values.  
+The spatial pattern of crude death rate shown in figure 2 shows a clear pattern. States on both the North East coast and the West tend to have low CDRs, while the Appalachian and Southern States have high values.  
 
 
 ```{r, fig.cap='Fig 2: Crude death rate calculate as the numbers of deaths per year divided by the population of the state in the year in question. The mean is taken for the years between 2011 to to 2019. During this period the overall CDR has only shown minor change, although with some fluctuations in a few  states'}
@@ -109,8 +130,8 @@ map1
 ## Adjustment for age
 
 A fully comprehensive adjustment of the CDR would require the calculation of age specific death rates for all demographic bands for each state combined with data on the number of deaths for each of the age bands. 
-A simpler approach that results in an adjustment that should follow the same overall pattern can be achieved by regressing the crude death rate on the proportion of the population over 70 and then extracting the residual variability. 
-The approach is illustrated in figure 3. States with CDRs that fall above the fitted regression line have more deaths than would be predicted based on the proportion of elderly residents. States that fall below the line have fewer deaths than expected. 
+A less detailed approach that results in an adjustment that follows the same overall pattern can be achieved by regressing the crude death rate on the proportion of the population over 70 and then extracting the residual variability. 
+The analysis is shown in figure 3. States with CDRs that fall above the fitted regression line have more deaths than would be predicted based on the proportion of elderly residents. States that fall below the line have fewer deaths than expected. 
 
 The regression itself is a good predictor of overall crude death rates with an $R^2$ value of 0.43. The position of Florida, falling well below the trend line, suggests that the overall health of the Florida population may be better than would be expected given the age profile for the state as a whole.     
 
@@ -265,7 +286,7 @@ print(map3, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
 ## Summary
 
 - Baseline crude mortality rates vary by a factor of two between US states. 
-- An important fraction of this variability can be attributed directly to variability in the fraction of the population over 70 years of age.
+- A large fraction of this variability can be attributed directly to variability in the fraction of the population over 70 years of age.
 - Independently of the effect of demography, socio-economic differences between states as captured by media household incomes statistically explains a large proportion of the residual variability
 
 
@@ -274,11 +295,8 @@ print(map3, vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
 
 ## Covid deaths
 
-At the time of writing (`r Sys.Date()`) there is no clearly defined variable that measures the impact of Covid-19 on deaths within any US State. The pandemic dynamic has led to many time series being plotted in order to understand elements such as the timing of non pharmaceutical interventions on the progression of the epidemic.
-
-Nine months have now passed since the initial phase of the pandemic. The numbers of deaths attributed to Sars-Cov-2 infections in the USA continues to rise. So any analysis will only be provisional.
-
-The baseline CDR analysis was based on the sum total of deaths over a twelve month period. Therefore a comparable analysis of Covid-19 attributed deaths can use the current cumulative deaths total as input. 
+At the time of writing (`r Sys.Date()`), nine months have  passed since the initial phase of the pandemic. The numbers of deaths attributed to Sars-Cov-2 infections in the USA continues to rise. Any analysis will be provisional and the full impact of the pandemic remains to be documented.
+The baseline CDR analysis used the sum total of deaths over a twelve month period. Therefore a comparable analysis of Covid-19 attributed deaths can use the current cumulative deaths to date as input. 
 
 
 ```{r}
@@ -300,6 +318,8 @@ d %>% group_by(State, population, covid_month) %>% summarise(covid_deaths=max(de
 ```
 
 
+
+
 ```{r, Fig 7: Crude cummulative covid death rates per 10k of state population for later monthhs in the epidemic. Notice that states that registered high early mortality are ouliers. Some states such as the Dokotas have risen in rank in recent months.}
 cvd2 %>% filter(covid_month> 6) %>% mutate(lb=ifelse(State %in% c("Arizona","Utah", "California", "Florida", "New York", "North Dakota","Texas", "South Dakota", "New Jersey") ,State,"")) %>% 
 ggplot(aes(as.factor(covid_month),y=covid_cdr, label=lb)) + geom_boxplot(alpha=0.2,fill="lightgrey",col="lightgrey") + geom_text(size=2) ->cg1
@@ -312,7 +332,7 @@ cg1
 
 ## Mapping Covid deaths
 
-The cumulative numbers of Covid-19 deaths reported for each state divided by the state population (in 2019) is shown in figure 
+The cumulative numbers of Covid-19 deaths reported for each state divided by the state population (in 2019) is shown in figure 9
 
 
 ```{r, fig.cap='Fig 9: Crude cummulative covid death rates per 10k of state population January 2021.'}
@@ -332,7 +352,9 @@ covid_map1
 
 In contrast to the baseline all cause population adjusted mortality the cumulative deaths attributed to Covid-19 per state show no statistically significant relationship with any of the covariates associated with baseline mortality.
 
-In addition the cumulative lockdown stringency index was calculated for the states 
+In addition the cumulative NPI stringency index was calculated for the states over the period since non pharmaceutical interventions were introduced. Taking the mean stringency index as a single measure ignores the timing of interventions, but produces a single integrated measure of both intensity and duration of the measures. The duration of school closures in days was also included in the analysis.
+
+Figure 10 shows the results of individual regressions of the crude covid related death ratio on six covariates. Non of the regressions is statistically significant. 
 
 ```{r}
 cdr<-merge(cdr,cvd)
@@ -340,7 +362,7 @@ cdr$covid_percent_of_baseline<-100*(cdr$covid_cdr/cdr$crude_death_rate)
 
 ```
 
-```{r, fig.cap='Fig 10: Realtionships between crude cummulative covid death rates per 10k of state population January 2021 and covariates. All regression lines are not significant at p<0.05'}
+```{r, fig.cap='Fig 10: Relationships between crude cummulative covid death rates per 10k of state population January 2021 and covariates. Non of the regression lines are statistically significant.'}
 cdr<-merge(cdr,measures)
 ggplot(cdr,aes(x=crude_death_rate,y=covid_cdr,label=State))  + geom_smooth(method="lm",alpha=0.5,col="black") +geom_point(size=1) ->gg1
 
@@ -358,14 +380,16 @@ multiplot(gg1,gg2,gg3,gg4,gg5,gg6, cols=2)
 
 ```
 
-A multiple additive regression model which included all potential explanatory variables did not show any variable to be siginficantly 
+A multiple additive regression model including all six potential explanatory variables did not show any variable to be significantly associated with the covid crude deaths ratio. 
 
 ```{r}
 model<- lm(data=cdr, covid_cdr~crude_death_rate+percent_over_70+percent_over_70+Re_adjusted_cdr+stringency+schools)
-summary(model)
+anova(model, test="F")
 ```
 
+## Spatial autocorrelation
 
+One alternative explanation for the variability in deaths between states is spatial proximity to neighbouring states with similar death rates. The effect of neighbours can be tested by calculating Moran's I based on a queen's move neighbour rule.
 
 ```{r}
 cdr_geo<-merge(us,cdr)
@@ -375,12 +399,54 @@ lw <- nb2listw(nb, style="W", zero.policy=TRUE)
 moran.test(s$covid_percent_of_baseline,lw, alternative="greater")
 ```
 
+A more rigorous test involves a Monte Carlo simulation.
 
 ```{r}
-s$inc.lag <- lag.listw(lw, s$covid_percent_of_baseline)
+moran.mc(s$covid_percent_of_baseline, lw, nsim=999, alternative="greater")
 
-s@data %>% ggplot(aes(x=inc.lag, y=covid_percent_of_baseline, label=State)) +geom_smooth(method="lm", alpha=0.1,col="lightgrey") + geom_text(size=2, check_overlap = TRUE, nudge_y=0.5) +xlab("Mean percent baseline mortality in neighbouring states")  + ylab("Percent baseline mortality")
 ```
+
+Moran's I can be visualised by 
+
+```{r, fig.cap= " Fig 11: Relationships between crude cummulative covid death rates per 10k of state population by January 2021 and the mean value in neighbouring states. The relationship is significant (Moran's I =0.24, p<0.05)."}
+cdr$mean_neighbours <- lag.listw(lw, s$covid_percent_of_baseline)
+
+cdr %>% ggplot(aes(x=mean_neighbours, y=covid_percent_of_baseline, label=State)) +geom_smooth(method="lm", alpha=0.1,col="lightgrey") + geom_text(size=2, check_overlap = TRUE, nudge_y=0.5) +xlab("Mean percent baseline mortality in neighbouring states")  + ylab("Percent baseline mortality")
+```
+
+##  Multiple regression model with spatial component
+
+An additive multiple regression model that included the spatial component shows some statistical significance (p=0.017) as a result of inclusion of the spatial term. The only term in the model that was weakly, but statistically significantly, associated with the covid related crude death ratio was the mean crude death ratio related to covid in neighbouring states.
+
+```{r}
+model<- lm(data=cdr, covid_cdr~crude_death_rate+percent_over_70+percent_over_70+Re_adjusted_cdr+stringency+schools + mean_neighbours)
+anova(model, test="F")
+summary(model)
+```
+
+
+```{r}
+data("States_COVID19")
+d<-States_COVID19
+d %>% group_by(State) %>% summarise(tests=max(tests, na.rm=TRUE),cases=max(confirmed,na.rm=TRUE) ,deaths=max(deaths, na.rm=TRUE), population = max(population, na.rm=TRUE)) -> d
+d <-merge(measures,d)
+
+d$tests_per<-d$tests/(d$population)
+d$cases_per<-d$cases/(d$population/10000)
+d$deaths_per<-d$deaths/(d$population/10000)
+
+ggplot(d,aes(y=tests_per,x=stringency, label=State) ) + geom_text() + geom_smooth(method="lm")
+```
+
+
+
+## Summary
+
+- Baseline crude mortality rates are strongly correlated with demographic and socio economic factors. In particular median household income is a effective predictor of a States CDR after holding for the percentage of the population over 70. 
+- There are no statistically significant relationships between covid related crude mortality rate and the key demographic and socio economic determinants of all cause crude death rates.
+- There are no statistically significant relationships between covid related crude death rate and integrated measures of the stringency of no pharmaceutical interventions. 
+- The best predictor of covid related crude death rate are the rates measured in neighbouring states.
+
 
 
 ## Searchable data table {.tabset}
