@@ -66,21 +66,25 @@ g1 + labs(title = "",
 g1
 ```
 
+## Crude state wide mortality rates: Years 2019 to 2020
 
+In order to triangulate against the data obtained from the national census estimates data was aggregated from the cdc weekly counts of deaths for 2019 and 2020  [@cdc_weekly]. There are some minor differences between the estimates for all cause deaths in 2019 between the two data sets, but the general pattern and numbers are consistent.
 
-```{r}
+```{r, fig.cap='Fig 1a: Crude all cause death rates per 10 thousand for the  population of the USA States 2019 to 2010'}
 data("weeekly_counts")
 cdc<-weekly_counts
-cdc %>% filter(name=="All_Cause") %>% group_by(Jurisdiction_of_Occurrence,pop,MMWR_Year) %>% summarise(deaths=sum(value)) %>% mutate(rate=deaths/(pop/10000)) -> cdc
 cdc$Year<-cdc$MMWR_Year
 cdc$State<-cdc$Jurisdiction_of_Occurrence
 
-cdc %>% mutate(lb=ifelse(State %in% c("West Virginia","Utah", "California", "Florida", "New York", "North Dakota","Texas", "Oklahoma") ,State,"")) %>%
-  
-  ggplot(aes(x=as.factor(Year), y=rate, label=lb)) + geom_boxplot(alpha=0.2,fill="lightgrey",col="lightgrey") + geom_text(size=2) -> g1
+cdc %>% filter(name=="All_Cause") %>% group_by(State,pop,Year) %>% summarise(deaths=sum(value)) %>% mutate(rate=deaths/(pop/10000)) -> all_cause
 
-g1 + labs(title = "", 
-                     caption = "Source: USA census population estimate \n see https://www.census.gov/programs-surveys/popest.html for details",
+
+all_cause %>% mutate(lb=ifelse(State %in% c("West Virginia","Utah", "California", "Florida", "New Jersey", "North Dakota","Texas") ,State,"")) %>%
+  
+  ggplot(aes(x=as.factor(Year), y=rate, label=lb)) + geom_boxplot(alpha=0.2,fill="lightgrey",col="lightgrey") + geom_text(size=2) -> g2
+
+g2 + labs(title = "", 
+                     caption = "Source: Accessed January 20.\n https://catalog.data.gov/dataset/weekly-counts-of-deaths-by-state-and-select-causes-2019-2020.",
                      x = "Year",
                      y="Crude death rate (deaths per 10K)") 
 
@@ -305,7 +309,7 @@ d<-States_COVID19
 d$population<-aqm::clean(d$population)
 d$month<-month(d$date)
 d$year<-year(d$date) 
-d$covid_month<-d$month+(d$year-2020)
+d$covid_month<-d$month+(12*(d$year-2020))
 
 d %>% group_by(State, population) %>% summarise(covid_deaths=max(deaths,na.rm=TRUE)) %>% mutate(covid_cdr=covid_deaths/(population/10000))-> cvd
 
@@ -396,7 +400,7 @@ cdr_geo<-merge(us,cdr)
 s<-as(cdr_geo,"Spatial")
 nb <- poly2nb(s, queen=TRUE)
 lw <- nb2listw(nb, style="W", zero.policy=TRUE)
-moran.test(s$covid_percent_of_baseline,lw, alternative="greater")
+moran.test(s$covid_cdr,lw, alternative="greater")
 ```
 
 A more rigorous test involves a Monte Carlo simulation.
@@ -413,6 +417,14 @@ cdr$mean_neighbours <- lag.listw(lw, s$covid_percent_of_baseline)
 
 cdr %>% ggplot(aes(x=mean_neighbours, y=covid_percent_of_baseline, label=State)) +geom_smooth(method="lm", alpha=0.1,col="lightgrey") + geom_text(size=2, check_overlap = TRUE, nudge_y=0.5) +xlab("Mean percent baseline mortality in neighbouring states")  + ylab("Percent baseline mortality")
 ```
+## Change in clustering over time
+
+The change the spatial autocorrelation (clustering) of the covid related crude death rate can be depicted as a change in the Moran's I statistic calculated for the cummulative deaths atributed to covid in each month since the epidemic began in March.
+
+![Change in value of Moran's I](morans.jpg)
+
+![Change in Moran's I](moran.gif)
+
 
 ##  Multiple regression model with spatial component
 
@@ -449,16 +461,7 @@ ggplot(d,aes(y=tests_per,x=stringency, label=State) ) + geom_text() + geom_smoot
 
 
 
-## Searchable data table {.tabset}
 
-
-
-```{r}
-dt(cdr)
-```
-
-
-
- [@CDC; @CDC2020; @CDC2020a; @Force, @phe]
+ [@CDC; @CDC2020; @CDC2020a; @Force, @phe, @cdc_weekly]
 
 # References and data sources
