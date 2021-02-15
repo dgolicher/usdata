@@ -1,0 +1,27 @@
+---
+title: "Deaths vs tests"
+author: "Duncan Golicher"
+date: "22/01/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(COVID19)
+```
+
+```{r, results='hide'}
+d<- COVID19::covid19()
+d$admin<-d$administrative_area_level_1
+d %>% group_by(admin) %>% summarise(tests=max(tests, na.rm=TRUE),cases=max(confirmed,na.rm=TRUE) ,deaths=max(deaths, na.rm=TRUE), population = max(population, na.rm=TRUE)) -> d
+d$tests_per<-d$tests/(d$population)
+d$cases_per<-d$cases/(d$population/10000)
+d$deaths_per<-d$deaths/(d$population/10000)
+```
+
+```{r}
+ggplot(d,aes(x=tests_per,y=deaths_per, label=admin) ) + geom_text(size=1.4) + geom_smooth(method="lm") + xlab("Tests per capita") + ylab ("Total covid related deaths per 10k of the population") + scale_x_continuous(trans='log10')
+
+```
+

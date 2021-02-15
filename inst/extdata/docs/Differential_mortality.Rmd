@@ -447,7 +447,7 @@ d$tests_per<-d$tests/(d$population)
 d$cases_per<-d$cases/(d$population/10000)
 d$deaths_per<-d$deaths/(d$population/10000)
 
-ggplot(d,aes(y=tests_per,x=stringency, label=State) ) + geom_text() + geom_smooth(method="lm")
+ggplot(d,aes(x=tests_per,y=deaths_per, label=State) ) + geom_text() + geom_smooth(method="lm") + xlab("Tests per capita") + ylab ("Total covid related deaths per 10k of the population")
 ```
 
 
